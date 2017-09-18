@@ -2,8 +2,12 @@ package com.adsology;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class ConsumeVerticle extends AbstractVerticle {
+
+    private static Logger logger = LogManager.getLogger(ConsumeVerticle.class);
 
     private final String ADDRESS;
 
@@ -15,7 +19,7 @@ public class ConsumeVerticle extends AbstractVerticle {
     public void start(Future<Void> startFuture) throws Exception {
 
         vertx.eventBus().consumer(ADDRESS, message -> {
-            System.out.printf("Message %s received\n", message.body());
+            logger.info("Message {} received", message.body());
         });
     }
 }
