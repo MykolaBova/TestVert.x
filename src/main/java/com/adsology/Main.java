@@ -7,6 +7,8 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.stream.IntStream;
+
 public class Main {
 
     private static Logger logger = LogManager.getLogger(Main.class);
@@ -17,7 +19,7 @@ public class Main {
         router.get("/start/:senders/:receivers/:messages/:mps").handler(Main::doAllJob);
 
         vertx.createHttpServer()
-                .requestHandler(router::accept).listen(8080);
+                .requestHandler(router::accept).listen(8081);
 
 
     }
@@ -25,14 +27,24 @@ public class Main {
     private static void doAllJob(RoutingContext routingContext) {
         logger.info("Received request {}", routingContext.request().path());
 
-        String senders = routingContext.request().getParam("senders");
-        String receivers = routingContext.request().getParam("receivers");
-        String messages = routingContext.request().getParam("messages");
-        String messagesPerSecond = routingContext.request().getParam("mps");
+        Integer senders = Integer.valueOf(routingContext.request().getParam("senders"));
+        Integer receivers = Integer.valueOf(routingContext.request().getParam("receivers"));
+        Integer messages = Integer.valueOf(routingContext.request().getParam("messages"));
+        Integer messagesPerSecond = Integer.valueOf(routingContext.request().getParam("mps"));
 
         logger.info("Need to create {} senders and {} receivers for {} messages", senders, receivers, messages);
-        vertx.deployVerticle(new ConsumeVerticle("test"));
-        vertx.deployVerticle(new SenderVerticle("test"));
+
+//        IntStream.range(0, receivers)
+//                .forEach();
+        for (int i = 0; i < receivers; i++) {
+            vertx.deployVerticle(new ConsumeVerticle(String.valueOf(i)));
+        }
+
+        for (int j = 0; j < senders; j++) {
+            vertx.deployVerticle(new SenderVerticle((messagesPerSecond * 1000 * senders), messages / senders, String.valueOf(j)));
+//            Strand.sleep(messagesPerSecond * 1000 * senders);
+
+        }
 
         routingContext.response()
                 .putHeader("content-type", "application/json; charset=utf-8")
