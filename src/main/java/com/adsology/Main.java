@@ -36,14 +36,32 @@ public class Main {
 
 //        IntStream.range(0, receivers)
 //                .forEach();
+
+        // Create consumers
         for (int i = 0; i < receivers; i++) {
             vertx.deployVerticle(new ConsumeVerticle(String.valueOf(i)));
         }
 
-        for (int j = 0; j < senders; j++) {
-            vertx.deployVerticle(new SenderVerticle((messagesPerSecond * 1000 * senders), messages / senders, String.valueOf(j)));
-//            Strand.sleep(messagesPerSecond * 1000 * senders);
+        // Create senders
 
+        int sendDelay = messagesPerSecond * 1000 * senders;
+        int loop = messages / senders;
+        if (senders > receivers) {
+            int receiver = 0;
+            for (int i = 0; i < senders; i++) {
+                vertx.deployVerticle(new SenderVerticle(sendDelay, loop, String.valueOf(receiver)));
+                receiver = receiver < receiver - 1 ? ++receiver : 0 ;
+            }
+        } else if (senders < receivers) {
+//            int receiversPerSender = receivers / senders;
+//            int lastReceiver = 0;
+//            for (int i = 0; i < senders; i++) {
+//                String[] addresses =;
+//                for (int j = lastReceiver; j < lastReceiver + receiversPerSender; j++) {
+//                    addresses[]
+//                }
+//                vertx.deployVerticle(new SenderVerticle(sendDelay, loop, ));
+//            }
         }
 
         routingContext.response()
