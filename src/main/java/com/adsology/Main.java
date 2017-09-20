@@ -1,5 +1,6 @@
 package com.adsology;
 
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.Router;
@@ -38,9 +39,6 @@ public class Main {
 
         logger.info("Need to create {} senders and {} receivers for {} messages", senders, receivers, messages);
 
-//        IntStream.range(0, receivers)
-//                .forEach();
-
         // Create consumers
         List<String> addresses = IntStream.range(0, receivers)
                 .mapToObj(String::valueOf)
@@ -53,30 +51,47 @@ public class Main {
 
         int sendDelay = messagesPerSecond * 1000 * senders;
         if (senders >= receivers) {
+            int createSenderDelay = Math.abs((messagesPerSecond * 1000) - sendDelay);
             int loop = messages / senders;
-            int index = 0;
-            for (int i = 0; i < senders; i++) {
-                vertx.deployVerticle(new SenderVerticle(
-                        sendDelay,
-                        loop,
-                        Collections.singletonList(
-                                addresses.get(index))));
-                index = index < receivers - 1 ? ++index : 0 ;
-            }
+            vertx.setPeriodic(createSenderDelay, new Handler<Long>() {
+                int index = 0;
+                int senderCount = 1;
+                @Override
+                public void handle(Long event) {
+                    vertx.deployVerticle(new SenderVerticle(
+                            sendDelay,
+                            loop,
+                            Collections.singletonList(
+                                    addresses.get(index))));
+                    index = index < receivers - 1 ? ++index : 0 ;
+                    if (++senderCount == senders) {
+                        vertx.cancelTimer(event);
+                    }
+                }
+            });
         } else if (senders < receivers) {
+            //ToDo fix to rounding up
             int loop = messages / receivers;
-
             int receiversPerSender = receivers / senders;
-            int lastIndex = 0;
-            for (int i = 0; i < senders; i++) {
-                vertx.deployVerticle(new SenderVerticle(
-                        sendDelay,
-                        loop,
-                        addresses.subList(
-                                lastIndex,
-                                lastIndex + receiversPerSender)));
-                lastIndex += receiversPerSender;
-            }
+            int createSenderDelay = Math.abs((receiversPerSender * messagesPerSecond * 1000) - sendDelay);
+            vertx.setPeriodic(createSenderDelay, new Handler<Long>() {
+                int lastIndex = 0;
+                int senderCount = 0;
+
+                @Override
+                public void handle(Long event) {
+                    vertx.deployVerticle(new SenderVerticle(
+                            sendDelay,
+                            loop,
+                            addresses.subList(
+                                    lastIndex,
+                                    lastIndex + receiversPerSender)));
+                    lastIndex += receiversPerSender;
+                    if (++senderCount == senders) {
+                        vertx.cancelTimer(event);
+                    }
+                }
+            });
         }
 
         routingContext.response()

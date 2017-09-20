@@ -3,7 +3,6 @@ package com.adsology;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.EventBus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -29,10 +28,19 @@ public class SenderVerticle extends AbstractVerticle {
 
             @Override
             public void handle(Long event) {
-                for (int i = 0; i < addresses.size(); i++) {
-                    vertx.eventBus().send(addresses.get(i), "ping");
-                    logger.info("Sender send message to {}", addresses.get(i));
-                }
+                vertx.setPeriodic(delay / addresses.size(), new Handler<Long>() {
+                    int addressIndex = 0;
+
+                    @Override
+                    public void handle(Long event) {
+                        vertx.eventBus().send(addresses.get(addressIndex), "ping");
+                        logger.info("Sender send message to {}", addresses.get(addressIndex));
+                        if (++addressIndex == addresses.size()) {
+                            vertx.cancelTimer(event);
+                        }
+                    }
+                });
+
 
                 if (++count > loop) {
                     System.out.println("sender finish");
@@ -40,13 +48,5 @@ public class SenderVerticle extends AbstractVerticle {
                 }
             }
         });
-/*
-        vertx.eventBus().send(addresses, "ping");
-//        vertx.setPeriodic(delay, sender -> {
-//            vertx.eventBus().send(addresses, "ping");
-//        });
-
-        logger.info("Sender send message to {}", addresses);
-        */
     }
 }
