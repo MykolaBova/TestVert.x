@@ -52,7 +52,7 @@ public class Main {
         // Create senders
 
         int sendDelay = messagesPerSecond * 1000 * senders;
-        if (senders > receivers) {
+        if (senders >= receivers) {
             int loop = messages / senders;
             int index = 0;
             for (int i = 0; i < senders; i++) {
@@ -61,7 +61,7 @@ public class Main {
                         loop,
                         Collections.singletonList(
                                 addresses.get(index))));
-                index = index < index - 1 ? ++index : 0 ;
+                index = index < receivers - 1 ? ++index : 0 ;
             }
         } else if (senders < receivers) {
             int loop = messages / receivers;
